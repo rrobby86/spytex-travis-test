@@ -29,6 +29,9 @@ setup(
     long_description_content_type="text/markdown",
     url="https://github.com/rrobby86/spytex",
     packages=find_packages(),
+    install_requires=[
+        "smart-open>=1.8.1",
+    ],
     entry_points={
         "console_scripts": ["spytex=spytex.cli:main"]
     },

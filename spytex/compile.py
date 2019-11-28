@@ -6,7 +6,7 @@ import collections.abc
 from typing import Any, Mapping
 
 from .defs import (Definition, ConcreteValue, NameReference, Call, SeqDef,
-                   DictDef, ContextValue, ContextBinder)
+                   DictDef, ContextValue, ContextBinder, Unpickle)
 
 
 def _single_key_or_empty(mapping: Mapping[str, Any]) -> str:
@@ -29,6 +29,8 @@ def _(obj):
 def _(obj):
     if _single_key_or_empty(obj) == "=":
         return ContextValue(next(iter(obj.values())))
+    elif _single_key_or_empty(obj) == "@unpickle":
+        return Unpickle(next(iter(obj.values())))
     elif "=" in obj:
         obj = obj.copy()
         values = _compile_dict_vals(obj.pop("="))

@@ -6,6 +6,8 @@ from pydoc import locate
 import pickle
 from typing import Any, Iterable, Sequence, Mapping, Type
 
+from smart_open import open
+
 from .context import ResolutionContext
 
 
@@ -114,3 +116,16 @@ class ContextBinder(Definition):
                          for key, val in self.values.items()}
         inner_context = context.update_vals(resolved_vals)
         return self.wrapped.resolve(inner_context)
+
+
+class Unpickle(Definition):
+    """Definition of an object pickled in a given file."""
+
+    __slots__ = "filename"
+
+    def __init__(self, filename: str):
+        self.filename = filename
+
+    def resolve(self, context: ResolutionContext):
+        with open(self.filename, "rb") as f:
+            return pickle.load(f)

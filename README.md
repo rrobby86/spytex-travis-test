@@ -36,6 +36,13 @@ codebase, SPyTEx allows to define tasks in form of JSON files which are a more
 standard format and provide some short notations for functionality such as
 unpickling objects from local or remote files.
 
+Installation
+------------
+
+```
+pip install spytex
+```
+
 Task specification
 ------------------
 
@@ -82,6 +89,17 @@ from acme.learn import train_model
 train_model('data1.csv', 'data2.csv', model='svm')
 ```
 
+If you have exactly one positional argument and no keyword arguments, you can
+use a shorter equivalent syntax.
+
+```
+{"!acme.learn.train_model": "trainset.csv"}
+
+# equivalent to:
+from acme.learn import train_model
+train_model('trainset.csv')
+```
+
 In order to pass more complex objects as arguments, a nested invocation can be
 specified in place of a single value: such invocation can be a class
 instantiation. In the example below we instantiate a [scikit-learn] classifier.
@@ -104,12 +122,46 @@ from sklearn.svm import SVC
 train_model(data='trainset.csv', model=SVC(C=0.1, kernel='poly', degree=3))
 ```
 
+A special `@unpickle` operator is provided to get an object from a named file
+using `pickle.load`. **Do not unpickle untrusted files!**
+
+```
+{
+  "!": "acme.learn.validate_model",
+  "data": "testset.csv",
+  "model": {"@unpickle": "model.bin"}
+}
+
+# equivalent to:
+import pickle
+from acme.learn import validate_model
+with open('model.bin', 'rb') as f:
+    model = pickle.load(f)
+validate_model(data='testset.csv', model=model)
+```
+
 Running a task
 --------------
+
+Once you have a `task_file.json` following the syntax above, just run
 
 ```
 spytex task_file.json
 ```
+
+If the function returns a non-`None` object, it will be `print`ed to standard
+output, unless you add a `-q`/`--quiet` flag. Use the `-p file.bin`/`--pickle
+file.bin` option to `pickle.dump` the returned object to a given file.
+
+Use `spytex -h`/`spytex --help` to get the list of all options.
+
+Remote files
+------------
+
+SPyTEx uses [smart-open] to open file names specified both in the JSON files
+and in the CLI: this allows to fetch and write files from HTTP[S] (read only),
+[Amazon S3] and other non-local sources. Refer to the
+[smart-open documentation][smart-open] for more information.
 
 Internals
 ---------
@@ -130,10 +182,8 @@ Planned features
 
 _(in rough priority order)_
 
-- additional operators in JSON, e.g. to pass a date in "YYYY-MM-DD" format or
-  to unpickle an object from a file
-- support for remote files (HTTP, S3, ...) by integrating [smart-open]
-- command-line parameters (referenceable from JSON file) and options (e.g.
+- additional operators in JSON, e.g. to pass a date in "YYYY-MM-DD" format
+- command-line parameters (referenceable from JSON file) and more options (e.g.
   logging configuration)
 - support for different syntaxes (e.g. using keywords in place of symbols)
   and/or for JSON alternatives (e.g. [TOML])
@@ -142,4 +192,5 @@ _(in rough priority order)_
 
 [scikit-learn]: https://scikit-learn.org/
 [smart-open]: https://pypi.org/project/smart-open/
+[Amazon S3]: https://aws.amazon.com/s3/
 [TOML]: https://github.com/toml-lang/toml
