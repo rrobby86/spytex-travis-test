@@ -90,7 +90,8 @@ train_model('data1.csv', 'data2.csv', model='svm')
 ```
 
 If you have exactly one positional argument and no keyword arguments, you can
-use a shorter equivalent syntax.
+use a shorter equivalent syntax (unless there is a clash with a magic function
+name, see below).
 
 ```
 {"!acme.learn.train_model": "trainset.csv"}
@@ -122,14 +123,20 @@ from sklearn.svm import SVC
 train_model(data='trainset.csv', model=SVC(C=0.1, kernel='poly', degree=3))
 ```
 
-A special `@unpickle` operator is provided to get an object from a named file
-using `pickle.load`. **Do not unpickle untrusted files!**
+Some convenient "magic" calls in the form `{"!name": "argument"}` are provided
+for common operations. Currently supported magic functions are:
+
+- `!run`: invokes the task in the specified file and returns its result
+- `!unpickle`: returns an object deserialized from given file using
+  `pickle.load` **(do not unpickle untrusted files!)**
+
+Example usage for `!unpickle`:
 
 ```
 {
   "!": "acme.learn.validate_model",
   "data": "testset.csv",
-  "model": {"@unpickle": "model.bin"}
+  "model": {"!unpickle": "model.bin"}
 }
 
 # equivalent to:

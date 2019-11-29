@@ -6,7 +6,13 @@ import collections.abc
 from typing import Any, Mapping
 
 from .defs import (Definition, ConcreteValue, NameReference, Call, SeqDef,
-                   DictDef, ContextValue, ContextBinder, Unpickle)
+                   DictDef, ContextValue, ContextBinder, RunTask, Unpickle)
+
+
+_one_val_magics = {
+    "run": RunTask,
+    "unpickle": Unpickle,
+}
 
 
 def _single_key_or_empty(mapping: Mapping[str, Any]) -> str:
@@ -21,16 +27,25 @@ def compile(obj: Any) -> Definition:
     """Extract a definition from a JSON-like object representation."""
     return ConcreteValue(obj)
 
-@compile.register(collections.abc.Sequence)
+@compile.register(list)
+@compile.register(tuple)
 def _(obj):
     return SeqDef(list, map(compile, obj))
 
 @compile.register(collections.abc.Mapping)
 def _(obj):
-    if _single_key_or_empty(obj) == "=":
-        return ContextValue(next(iter(obj.values())))
-    elif _single_key_or_empty(obj) == "@unpickle":
-        return Unpickle(next(iter(obj.values())))
+    if len(obj) == 1:
+        key, val = next(iter(obj.items()))
+        if key.startswith("!"):
+            key = key[1:]
+            if key in _one_val_magics:
+                arg = compile(val)
+                return _one_val_magics[key](arg)
+            elif key:
+                arg = compile(val)
+                return Call(NameReference(key), [arg], {})
+        elif key == "=":
+            return ContextValue(val)
     elif "=" in obj:
         obj = obj.copy()
         values = _compile_dict_vals(obj.pop("="))
@@ -42,9 +57,5 @@ def _(obj):
         posargs = list(map(compile, obj.pop("*", [])))
         kwargs = _compile_dict_vals(obj)
         return Call(NameReference(callee), posargs, kwargs)
-    elif _single_key_or_empty(obj).startswith("!"):
-        key, val = next(iter(obj.items()))
-        arg = compile(val)
-        return Call(NameReference(key[1:]), [arg], {})
     else:
         return DictDef(_compile_dict_vals(obj))

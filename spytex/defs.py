@@ -118,14 +118,29 @@ class ContextBinder(Definition):
         return self.wrapped.resolve(inner_context)
 
 
+class RunTask(Definition):
+    """Reference to another task definition in a given file."""
+
+    __slots__ = "filename"
+
+    def __init__(self, filename: Definition):
+        self.filename = filename
+
+    def resolve(self, context: ResolutionContext):
+        from .api import run   # here to avoid circular import
+        filename = self.filename.resolve(context)
+        return run(filename, context)
+
+
 class Unpickle(Definition):
     """Definition of an object pickled in a given file."""
 
     __slots__ = "filename"
 
-    def __init__(self, filename: str):
+    def __init__(self, filename: Definition):
         self.filename = filename
 
     def resolve(self, context: ResolutionContext):
-        with open(self.filename, "rb") as f:
+        filename = self.filename.resolve(context)
+        with open(filename, "rb") as f:
             return pickle.load(f)

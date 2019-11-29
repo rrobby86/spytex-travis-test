@@ -1,12 +1,10 @@
-import json
 import pickle
 from argparse import ArgumentParser
 import sys
 
 from smart_open import open
 
-from .compile import compile
-from .context import ResolutionContext
+from .api import run
 
 
 def main():
@@ -24,11 +22,7 @@ def main():
         from . import __version__
         print("SPyTEx {}".format(__version__))
         return
-    with open(args.task_file, "r") if args.task_file else sys.stdin as f:
-        raw_task = json.load(f)
-    task_def = compile(raw_task)
-    context = ResolutionContext()
-    result = task_def.resolve(context)
+    result = run(args.task_file or sys.stdin)
     if result is not None and not args.quiet:
         print(result)
     if args.pickle:
