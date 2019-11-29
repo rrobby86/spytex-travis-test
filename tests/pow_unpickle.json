@@ -1,0 +1,4 @@
+{
+  "!": "pow",
+  "*": [{"!unpickle": "9.pickle.bin"}, 2]
+}

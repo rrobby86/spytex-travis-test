@@ -195,7 +195,6 @@ _(in rough priority order)_
 - support for different syntaxes (e.g. using keywords in place of symbols)
   and/or for JSON alternatives (e.g. [TOML])
 - proper documentation
-- test suite
 
 [scikit-learn]: https://scikit-learn.org/
 [smart-open]: https://pypi.org/project/smart-open/
