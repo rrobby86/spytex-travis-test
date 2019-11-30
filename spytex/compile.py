@@ -6,17 +6,9 @@ import collections.abc
 from typing import Any, Mapping
 
 from .defs import (Definition, ConcreteValue, NameReference, Call, SeqDef,
-                   DictDef, ContextValue, ContextBinder, RunTask, Unpickle)
+                   DictDef, ContextValue, ContextBinder)
+from .magics import get_magic
 
-
-_one_val_magics = {
-    "run": RunTask,
-    "unpickle": Unpickle,
-}
-
-
-def _single_key_or_empty(mapping: Mapping[str, Any]) -> str:
-    return next(iter(mapping.keys())) if len(mapping) == 1 else ""
 
 def _compile_dict_vals(mapping: Mapping[Any, Any]) -> Mapping[Any, Definition]:
     return {key: compile(val) for key, val in mapping.items()}
@@ -38,12 +30,15 @@ def _(obj):
         key, val = next(iter(obj.items()))
         if key.startswith("!"):
             key = key[1:]
-            if key in _one_val_magics:
+            if key:
                 arg = compile(val)
-                return _one_val_magics[key](arg)
+            magic = get_magic(key)
+            if magic:
+                pass_context = getattr(magic, "_pass_context", False)
+                return Call(ConcreteValue(magic), [arg],
+                            pass_context=1 if pass_context else None)
             elif key:
-                arg = compile(val)
-                return Call(NameReference(key), [arg], {})
+                return Call(NameReference(key), [arg])
         elif key == "=":
             return ContextValue(val)
     elif "=" in obj:

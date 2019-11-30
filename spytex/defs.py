@@ -3,10 +3,7 @@
 
 from abc import ABC, abstractmethod
 from pydoc import locate
-import pickle
-from typing import Any, Iterable, Sequence, Mapping, Type
-
-from smart_open import open
+from typing import Any, Iterable, Sequence, Mapping, Type, Union
 
 from .context import ResolutionContext
 
@@ -49,19 +46,25 @@ class NameReference(Definition):
 class Call(Definition):
     """Definition of object obtained by callable invocation."""
 
-    __slots__ = "callee", "posargs", "kwargs"
+    __slots__ = "callee", "posargs", "kwargs", "pass_context"
 
     def __init__(self, callee: Definition, posargs: Iterable[Definition] = (),
-                 kwargs: Mapping[str, Definition] = {}):
+                 kwargs: Mapping[str, Definition] = {},
+                 pass_context: Union[None, int, str] = None):
         self.callee = callee
         self.posargs = tuple(posargs)
         self.kwargs = dict(kwargs)
+        self.pass_context = pass_context
 
     def resolve(self, context: ResolutionContext):
         callee = self.callee.resolve(context)
         posargs = [arg.resolve(context) for arg in self.posargs]
         kwargs = {name: arg.resolve(context)
                   for name, arg in self.kwargs.items()}
+        if isinstance(self.pass_context, int):
+            posargs.insert(self.pass_context, context)
+        elif isinstance(self.pass_context, str):
+            kwargs[self.pass_context] = context
         return callee(*posargs, **kwargs)
 
 
@@ -116,31 +119,3 @@ class ContextBinder(Definition):
                          for key, val in self.values.items()}
         inner_context = context.update_vals(resolved_vals)
         return self.wrapped.resolve(inner_context)
-
-
-class RunTask(Definition):
-    """Reference to another task definition in a given file."""
-
-    __slots__ = "filename"
-
-    def __init__(self, filename: Definition):
-        self.filename = filename
-
-    def resolve(self, context: ResolutionContext):
-        from .api import run   # here to avoid circular import
-        filename = self.filename.resolve(context)
-        return run(filename, context)
-
-
-class Unpickle(Definition):
-    """Definition of an object pickled in a given file."""
-
-    __slots__ = "filename"
-
-    def __init__(self, filename: Definition):
-        self.filename = filename
-
-    def resolve(self, context: ResolutionContext):
-        filename = self.filename.resolve(context)
-        with open(filename, "rb") as f:
-            return pickle.load(f)
